@@ -10,18 +10,20 @@ typedef struct node{
 graph **createAdjList(int *, int *);
 void viewList(graph **, int);
 void deleteGraph(graph **, int);
-int *readObstacles(int, int *);
+int *readObstacles(int, int *, int *, int *);
 void printObstacles(int *, int);
+void printStartGoal(int, int);
 
 int main() {
     graph **g;
-    int v, e, num_obstacles;
+    int v, e, num_obstacles, start, goal;
 
     g = createAdjList(&v, &e);
-    int *obstacles = readObstacles(v, &num_obstacles);
+    int *obstacles = readObstacles(v, &num_obstacles, &start, &goal);
 
     viewList(g, v);
     printObstacles(obstacles, v);
+    printStartGoal(start, goal);
 
     deleteGraph(g, v);
     free(obstacles);
@@ -93,7 +95,7 @@ void deleteGraph(graph **g, int v){
     free(g);
 }
 
-int *readObstacles(int v, int *num_obstacles) {
+int *readObstacles(int v, int *num_obstacles, int *start, int *goal) {
     FILE *fp = fopen("config.in", "r");
     if (fp == NULL) {
         printf("Error opening config.in\n");
@@ -119,6 +121,10 @@ int *readObstacles(int v, int *num_obstacles) {
         obstacles[obs] = 1;
     }
 
+    // Read start and goal
+    fscanf(fp, "%d", start);
+    fscanf(fp, "%d", goal);
+
     fclose(fp);
     return obstacles;
 }
@@ -139,3 +145,8 @@ void printObstacles(int *obstacles, int v) {
     printf("\n");
 }
 
+// Print the start and goal vertices
+void printStartGoal(int start, int goal) {
+    printf("Start vertex: %d\n", start);
+    printf("Goal vertex: %d\n", goal);
+}
