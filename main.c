@@ -10,15 +10,21 @@ typedef struct node{
 graph **createAdjList(int *, int *);
 void viewList(graph **, int);
 void deleteGraph(graph **, int);
+int *readObstacles(int, int *);
+void printObstacles(int *, int);
 
 int main() {
     graph **g;
-    int v, e;
+    int v, e, num_obstacles;
 
     g = createAdjList(&v, &e);
+    int *obstacles = readObstacles(v, &num_obstacles);
+
     viewList(g, v);
+    printObstacles(obstacles, v);
 
     deleteGraph(g, v);
+    free(obstacles);
     return 0;
 }
 
@@ -86,3 +92,50 @@ void deleteGraph(graph **g, int v){
     }
     free(g);
 }
+
+int *readObstacles(int v, int *num_obstacles) {
+    FILE *fp = fopen("config.in", "r");
+    if (fp == NULL) {
+        printf("Error opening config.in\n");
+        exit(1);
+    }
+
+    int vertices, edges;
+    fscanf(fp, "%d", &vertices);
+    fscanf(fp, "%d", &edges);
+
+    // Skip edges
+    for (int i = 0; i < edges; i++) {
+        int a, b;
+        fscanf(fp, "%d %d", &a, &b);
+    }
+
+    // Now read obstacles
+    fscanf(fp, "%d", num_obstacles);
+    int *obstacles = calloc(v, sizeof(int));
+    for (int i = 0; i < *num_obstacles; i++) {
+        int obs;
+        fscanf(fp, "%d", &obs);
+        obstacles[obs] = 1;
+    }
+
+    fclose(fp);
+    return obstacles;
+}
+
+// Print the list of obstacle vertices
+void printObstacles(int *obstacles, int v) {
+    printf("Obstacles at: ");
+    int found = 0;
+    for (int i = 0; i < v; i++) {
+        if (obstacles[i]) {
+            printf("%d ", i);
+            found = 1;
+        }
+    }
+    if (!found) {
+        printf("None");
+    }
+    printf("\n");
+}
+
