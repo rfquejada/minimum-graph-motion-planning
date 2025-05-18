@@ -1,11 +1,12 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include "a_star.h"
 
 //Structure for the graph
-typedef struct node{
-    int x;
-    struct node *next;
-}graph;
+// typedef struct node{
+//     int x;
+//     struct node *next;
+// }graph;
 
 graph **createAdjList(int *, int *);
 void viewList(graph **, int);
@@ -24,6 +25,21 @@ int main() {
     viewList(g, v);
     printObstacles(obstacles, v);
     printStartGoal(start, goal);
+
+    int path_length;
+    int *path = a_star(g, v, obstacles, start, goal, &path_length);
+
+    // Print the path
+    printf("Shortest path: ");
+    if (path_length == 0) {
+        printf("No path exists\n");
+    } else {
+        for (int i = 0; i < path_length; i++) {
+            printf("%d", path[i]);
+            if (i < path_length - 1) printf(" -> ");
+        }
+        printf("\n");
+    }
 
     deleteGraph(g, v);
     free(obstacles);
