@@ -14,6 +14,8 @@ graph **createAdjList(int *, int *);
 void viewList(graph **, int);
 void deleteGraph(graph **, int);
 int *readObstacles(int, int *, int *, int *);
+int *readObstaclesDFS(int, int *, int *, int *);
+
 void printObstacles(int *, int);
 void printStartGoal(int, int);
 
@@ -25,6 +27,7 @@ int main() {
 
     g = createAdjList(&v, &e);
     int *obstacles = readObstacles(v, &num_obstacles, &start, &goal);
+    
 
     viewList(g, v);
     printObstacles(obstacles, v);
@@ -62,6 +65,7 @@ int main() {
 
 
     printf("\n--- DFS Pathfinding ---\n");
+    obstacles = readObstaclesDFS(v, &num_obstacles, &start, &goal);
     findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
 
     deleteGraph(g, v);
@@ -167,6 +171,39 @@ int *readObstacles(int v, int *num_obstacles, int *start, int *goal) {
     fclose(fp);
     return obstacles;
 }
+
+int *readObstaclesDFS(int v, int *num_obstacles, int *start, int *goal) {
+    FILE *fp = fopen("config.in", "r");
+    if (fp == NULL) {
+        printf("Error opening config.in\n");
+        exit(1);
+    }
+
+    int vertices, edges;
+    fscanf(fp, "%d", &vertices);
+    fscanf(fp, "%d", &edges);
+
+    // Skip edges
+    for (int i = 0; i < edges; i++) {
+        int a, b;
+        fscanf(fp, "%d %d", &a, &b);
+    }
+
+    // Now read obstacles
+    fscanf(fp, "%d", num_obstacles);
+    int *obstacles = malloc((*num_obstacles) * sizeof(int)); // Allocate space for the obstacle list
+    for (int i = 0; i < *num_obstacles; i++) {
+        fscanf(fp, "%d", &obstacles[i]); // Directly store the vertex index
+    }
+
+    // Read start and goal
+    fscanf(fp, "%d", start);
+    fscanf(fp, "%d", goal);
+
+    fclose(fp);
+    return obstacles;
+}
+
 
 // Print the list of obstacle vertices
 void printObstacles(int *obstacles, int v) {

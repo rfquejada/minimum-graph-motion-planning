@@ -96,7 +96,7 @@ void DFSTraversal(struct Graph* graph, int* order, int orderSize) {
 
 
 
-// Modified DFS to find shortest path
+
 
 
 // Modified isObstacle
@@ -128,6 +128,7 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
         prevObstacles[i] = obstacle[i];
     }
 
+    //Checking if the goal was already reached
     if (current == destination) {
         if (steps < *minSteps) {
             *minSteps = steps;
@@ -141,7 +142,7 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
         bool loop = true;
         while (loop) {
             loop = false;
-            int moveCase = rand() % 2; // 0 = robot only, 1 = obstacle only, 2 = both
+            int moveCase = rand() % 2; // 0 = robot only, 1 = obstacle only
             printf("Move case: %d (%s)\n", moveCase,
                 moveCase == 0 ? "robot only" :"obstacle only");
 
@@ -150,24 +151,25 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
             // Move obstacles if needed
             if (moveCase == 1 ) {
                 loop = true; // obstacles moved, may try again
-                for (int i = 0; i < obstacleSize; i++) {
-                    int original = obstacle[i];
-                    struct Node* neighbor = graph->array[original].head;
-                    while (neighbor) {
-                        int candidate = neighbor->data;
-                        if (!isObstacle(candidate, obstacle, obstacleSize, false) && candidate != current) {
-                            printf("[OBSTACLE] Obstacle %d moves to %d\n", original, candidate);
-                            obstacle[i] = candidate;
-                            break;
-                        }
-                        if (candidate == current) {
-                            printf("Obstacle movement blocked by candidate!\n");
-                        }
-                        neighbor = neighbor->next;
+                int randomObstacleIndex = rand() % obstacleSize;
+                int original = obstacle[randomObstacleIndex];
+                struct Node* neighbor = graph->array[original].head;
+
+                while (neighbor) {
+                    int candidate = neighbor->data;
+                    if (!isObstacle(candidate, obstacle, obstacleSize, false) && candidate != current) {
+                        printf("[OBSTACLE] Obstacle %d moves to %d\n", original, candidate);
+                        obstacle[randomObstacleIndex] = candidate;
+                        break;
                     }
-                    // Count obstacle move as one step
-                    steps++;
+                    if (candidate == current) {
+                        printf("Obstacle movement blocked by candidate!\n");
+                    }
+                    neighbor = neighbor->next;
                 }
+
+                // Count obstacle move as one step (even if it doesn't move)
+                steps++;
                 
             }
 
