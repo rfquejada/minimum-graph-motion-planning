@@ -4,33 +4,35 @@
 #include <string.h>
 #include <time.h>
 
+/* ---------------------------------- Structures ---------------------------------- */
+
 // Structure for graph nodes
 typedef struct node {
-    int x;
-    struct node *next;
+    int x;              /**< Vertex number of the neighbor. */
+    struct node *next;  /**< Pointer to the next neighbor in the list. */
 } graph;
 
 // Structure for priority queue nodes
 typedef struct {
-    int vertex;
-    int dist;
-    int *obstacle_config; // Current obstacle positions
+    int vertex;           /**< Current vertex of the robot. */
+    int dist;             /**< Distance (number of moves) to reach this state. */
+    int *obstacle_config; /**< Array representing obstacle positions. */
 } pq_node;
 
 // Structure for priority queue
 typedef struct {
-    pq_node *nodes;
-    int size;
-    int capacity;
+    pq_node *nodes; /**< Array of priority queue nodes. */
+    int size;       /**< Current number of nodes in the queue. */
+    int capacity;   /**< Maximum capacity of the queue. */
 } priority_queue;
 
 // Structure to return path and its length
 typedef struct {
-    int *path;
-    int length;
+    int *path;   /**< Array of vertices representing the path. */
+    int length;  /**< Length of the path (number of vertices). */
 } path_result;
 
-// Function prototypes
+/* ---------------------------------- Function Prototypes ---------------------------------- */
 path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int num_obstacles);
 priority_queue *create_pq(int capacity);
 void pq_push(priority_queue *pq, int vertex, int dist, int *obstacle_config, int v);
@@ -42,14 +44,28 @@ int config_equal(int *config1, int *config2, int v);
 int is_valid_move(graph **g, int vertex, int *obstacle_config, int v);
 int get_random_valid_neighbor(graph **g, int obstacle_vertex, int *obstacle_config, int curr_vertex, int v);
 
-// Modified Dijkstra's algorithm
+/* ---------------------------------- Dijkstra's Algorithm ---------------------------------- */
+
+/**
+ * @brief Finds the shortest path from start to goal vertex in a graph with moving obstacles.
+ * @param g Adjacency list representation of the graph (array of linked lists).
+ * @param v Number of vertices in the graph.
+ * @param start Starting vertex for the robot.
+ * @param goal Goal vertex to reach.
+ * @param obstacles Initial obstacle configuration (array of size v, 1 for obstacle, 0 otherwise).
+ * @param num_obstacles Number of obstacles in the initial configuration.
+ * @return path_result struct containing the shortest path and its length.
+ *         If no path exists, returns {NULL, 0}.
+ * @note Each step randomly chooses (50% probability) between a robot move or a single
+ *       obstacle move to a random valid neighbor. Assumes valid input parameters.
+ */
 path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int num_obstacles) {
     path_result result = {NULL, 0};
 
     // Seed random number generator
     srand(time(NULL));
 
-    // Initialize distances and visited arrays
+    // Initialize 3D arrays for distances and visited states
     int ***dist = malloc(v * sizeof(int **));
     int ***visited = malloc(v * sizeof(int **));
     for (int i = 0; i < v; i++) {
@@ -59,21 +75,21 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
             dist[i][j] = malloc((1 << v) * sizeof(int));
             visited[i][j] = malloc((1 << v) * sizeof(int));
             for (int k = 0; k < (1 << v); k++) {
-                dist[i][j][k] = INT_MAX;
-                visited[i][j][k] = 0;
+                dist[i][j][k] = INT_MAX; // Initialize distances to infinity
+                visited[i][j][k] = 0;    // Mark all states as unvisited
             }
         }
     }
 
-    // Create priority queue
+    // Create priority queue for states (vertex, distance, obstacle config)
     priority_queue *pq = create_pq(v * v * (1 << v));
     
-    // Initialize starting state
+    // Initialize starting state: robot at start vertex, initial obstacle config
     int *initial_config = copy_obstacle_config(obstacles, v);
     dist[start][0][0] = 0;
     pq_push(pq, start, 0, initial_config, v);
     
-    // Store parent information for path reconstruction
+    // Initialize parent array for path reconstruction
     int ****parent = malloc(v * sizeof(int ***));
     for (int i = 0; i < v; i++) {
         parent[i] = malloc(v * sizeof(int **));
@@ -81,30 +97,31 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
             parent[i][j] = malloc((1 << v) * sizeof(int *));
             for (int k = 0; k < (1 << v); k++) {
                 parent[i][j][k] = malloc(2 * sizeof(int));
-                parent[i][j][k][0] = -1; // Vertex
-                parent[i][j][k][1] = -1; // Obstacle config
+                parent[i][j][k][0] = -1; // Parent vertex
+                parent[i][j][k][1] = -1; // Parent obstacle config (bit mask)
             }
         }
     }
 
+    // Process states until queue is empty or goal is reached
     while (!is_empty_pq(pq)) {
-        pq_node current = pq_pop(pq);
+        pq_node current = pq_pop(pq); // Get state with minimum distance
         int curr_vertex = current.vertex;
         int curr_dist = current.dist;
         int *curr_config = current.obstacle_config;
         
-        // Convert config to bit mask for indexing
+        // Convert obstacle configuration to bit mask for indexing
         int config_mask = 0;
         for (int i = 0; i < v; i++) {
             if (curr_config[i]) config_mask |= (1 << i);
         }
-        
+        // Skip if state already visited
         if (visited[curr_vertex][0][config_mask]) {
             free(curr_config);
             continue;
         }
         
-        visited[curr_vertex][0][config_mask] = 1;
+        visited[curr_vertex][0][config_mask] = 1; // Mark state as visited
         
         // Check if goal reached
         if (curr_vertex == goal) {
@@ -131,6 +148,7 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
         int move_type = rand() % 2; // 0 for robot, 1 for obstacle
         
         if (move_type == 0) { // Robot move
+            // Explore all neighbors of current vertex
             graph *neighbor = g[curr_vertex];
             while (neighbor != NULL) {
                 int next_vertex = neighbor->x;
@@ -138,6 +156,7 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
                     int new_dist = curr_dist + 1;
                     int next_mask = config_mask;
                     
+                    // Update distance and parent if shorter path found
                     if (new_dist < dist[next_vertex][0][next_mask]) {
                         dist[next_vertex][0][next_mask] = new_dist;
                         int *new_config = copy_obstacle_config(curr_config, v);
@@ -150,7 +169,7 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
                 neighbor = neighbor->next;
             }
         } else { // Obstacle move
-            // Select one obstacle randomly
+            // Collect vertices with obstacles
             int *obstacle_vertices = malloc(num_obstacles * sizeof(int));
             int obstacle_count = 0;
             for (int i = 0; i < v; i++) {
@@ -248,6 +267,7 @@ void pq_push(priority_queue *pq, int vertex, int dist, int *obstacle_config, int
     }
 }
 
+// Pop the minimum element from the priority queue
 pq_node pq_pop(priority_queue *pq) {
     pq_node result = pq->nodes[0];
     
@@ -281,10 +301,12 @@ pq_node pq_pop(priority_queue *pq) {
     return result;
 }
 
+// Check if the priority queue is empty
 int is_empty_pq(priority_queue *pq) {
     return pq->size == 0;
 }
 
+// Free the priority queue
 void free_pq(priority_queue *pq) {
     for (int i = 0; i < pq->size; i++) {
         free(pq->nodes[i].obstacle_config);
@@ -293,12 +315,14 @@ void free_pq(priority_queue *pq) {
     free(pq);
 }
 
+// Copy obstacle configuration
 int *copy_obstacle_config(int *config, int v) {
     int *new_config = malloc(v * sizeof(int));
     memcpy(new_config, config, v * sizeof(int));
     return new_config;
 }
 
+// Check if two configurations are equal
 int config_equal(int *config1, int *config2, int v) {
     for (int i = 0; i < v; i++) {
         if (config1[i] != config2[i]) return 0;
@@ -306,11 +330,12 @@ int config_equal(int *config1, int *config2, int v) {
     return 1;
 }
 
+// Check if a move is valid (not an obstacle and within bounds)
 int is_valid_move(graph **g, int vertex, int *obstacle_config, int v) {
     return vertex >= 0 && vertex < v && !obstacle_config[vertex];
 }
 
-// New helper function to get a random valid neighbor
+// Helper function to get a random valid neighbor
 int get_random_valid_neighbor(graph **g, int obstacle_vertex, int *obstacle_config, int curr_vertex, int v) {
     // Count valid neighbors
     graph *neighbor = g[obstacle_vertex];
