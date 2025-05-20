@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
 
-// Structure for graph nodes (same as main.c)
+// Structure for graph nodes
 typedef struct node {
     int x;
     struct node *next;
@@ -39,10 +40,14 @@ void free_pq(priority_queue *pq);
 int *copy_obstacle_config(int *config, int v);
 int config_equal(int *config1, int *config2, int v);
 int is_valid_move(graph **g, int vertex, int *obstacle_config, int v);
+int get_random_valid_neighbor(graph **g, int obstacle_vertex, int *obstacle_config, int curr_vertex, int v);
 
-// Main Dijkstra's algorithm implementation
+// Modified Dijkstra's algorithm
 path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int num_obstacles) {
     path_result result = {NULL, 0};
+
+    // Seed random number generator
+    srand(time(NULL));
 
     // Initialize distances and visited arrays
     int ***dist = malloc(v * sizeof(int **));
@@ -122,56 +127,70 @@ path_result dijkstra(graph **g, int v, int start, int goal, int *obstacles, int 
             break;
         }
         
-        // Try moving robot
-        graph *neighbor = g[curr_vertex];
-        while (neighbor != NULL) {
-            int next_vertex = neighbor->x;
-            if (!curr_config[next_vertex]) { // Check if next vertex is free
-                int new_dist = curr_dist + 1;
-                int next_mask = config_mask;
-                
-                if (new_dist < dist[next_vertex][0][next_mask]) {
-                    dist[next_vertex][0][next_mask] = new_dist;
-                    int *new_config = copy_obstacle_config(curr_config, v);
-                    pq_push(pq, next_vertex, new_dist, new_config, v);
-                    
-                    parent[next_vertex][0][next_mask][0] = curr_vertex;
-                    parent[next_vertex][0][next_mask][1] = config_mask;
-                }
-            }
-            neighbor = neighbor->next;
-        }
+        // Randomly choose robot or obstacle move (50% probability)
+        int move_type = rand() % 2; // 0 for robot, 1 for obstacle
         
-        // Try moving obstacles
-        for (int i = 0; i < v; i++) {
-            if (curr_config[i]) { // If vertex i has an obstacle
-                neighbor = g[i];
-                while (neighbor != NULL) {
-                    int next_pos = neighbor->x;
-                    if (!curr_config[next_pos] && next_pos != curr_vertex) { // Check if move is valid
-                        int new_dist = curr_dist + 1;
+        if (move_type == 0) { // Robot move
+            graph *neighbor = g[curr_vertex];
+            while (neighbor != NULL) {
+                int next_vertex = neighbor->x;
+                if (!curr_config[next_vertex]) { // Check if next vertex is free
+                    int new_dist = curr_dist + 1;
+                    int next_mask = config_mask;
+                    
+                    if (new_dist < dist[next_vertex][0][next_mask]) {
+                        dist[next_vertex][0][next_mask] = new_dist;
                         int *new_config = copy_obstacle_config(curr_config, v);
-                        new_config[i] = 0;
-                        new_config[next_pos] = 1;
+                        pq_push(pq, next_vertex, new_dist, new_config, v);
                         
-                        int new_mask = 0;
-                        for (int j = 0; j < v; j++) {
-                            if (new_config[j]) new_mask |= (1 << j);
-                        }
-                        
-                        if (new_dist < dist[curr_vertex][0][new_mask]) {
-                            dist[curr_vertex][0][new_mask] = new_dist;
-                            pq_push(pq, curr_vertex, new_dist, new_config, v);
-                            
-                            parent[curr_vertex][0][new_mask][0] = curr_vertex;
-                            parent[curr_vertex][0][new_mask][1] = config_mask;
-                        } else {
-                            free(new_config);
-                        }
+                        parent[next_vertex][0][next_mask][0] = curr_vertex;
+                        parent[next_vertex][0][next_mask][1] = config_mask;
                     }
-                    neighbor = neighbor->next;
+                }
+                neighbor = neighbor->next;
+            }
+        } else { // Obstacle move
+            // Select one obstacle randomly
+            int *obstacle_vertices = malloc(num_obstacles * sizeof(int));
+            int obstacle_count = 0;
+            for (int i = 0; i < v; i++) {
+                if (curr_config[i]) {
+                    obstacle_vertices[obstacle_count++] = i;
                 }
             }
+            
+            if (obstacle_count > 0) {
+                // Randomly select one obstacle
+                int selected_obstacle_idx = rand() % obstacle_count;
+                int selected_obstacle = obstacle_vertices[selected_obstacle_idx];
+                
+                // Get a random valid neighbor for the selected obstacle
+                int next_pos = get_random_valid_neighbor(g, selected_obstacle, curr_config, curr_vertex, v);
+                
+                if (next_pos != -1) { // If a valid move exists
+                    int new_dist = curr_dist + 1;
+                    int *new_config = copy_obstacle_config(curr_config, v);
+                    new_config[selected_obstacle] = 0;
+                    new_config[next_pos] = 1;
+                    
+                    int new_mask = 0;
+                    for (int j = 0; j < v; j++) {
+                        if (new_config[j]) new_mask |= (1 << j);
+                    }
+                    
+                    if (new_dist < dist[curr_vertex][0][new_mask]) {
+                        dist[curr_vertex][0][new_mask] = new_dist;
+                        pq_push(pq, curr_vertex, new_dist, new_config, v);
+                        
+                        parent[curr_vertex][0][new_mask][0] = curr_vertex;
+                        parent[curr_vertex][0][new_mask][1] = config_mask;
+                    } else {
+                        free(new_config);
+                    }
+                }
+            }
+            
+            free(obstacle_vertices);
         }
         
         free(curr_config);
@@ -289,4 +308,35 @@ int config_equal(int *config1, int *config2, int v) {
 
 int is_valid_move(graph **g, int vertex, int *obstacle_config, int v) {
     return vertex >= 0 && vertex < v && !obstacle_config[vertex];
+}
+
+// New helper function to get a random valid neighbor
+int get_random_valid_neighbor(graph **g, int obstacle_vertex, int *obstacle_config, int curr_vertex, int v) {
+    // Count valid neighbors
+    graph *neighbor = g[obstacle_vertex];
+    int valid_neighbors = 0;
+    while (neighbor != NULL) {
+        if (!obstacle_config[neighbor->x] && neighbor->x != curr_vertex) {
+            valid_neighbors++;
+        }
+        neighbor = neighbor->next;
+    }
+    
+    if (valid_neighbors == 0) return -1; // No valid neighbors
+    
+    // Select a random valid neighbor
+    int target_index = rand() % valid_neighbors;
+    neighbor = g[obstacle_vertex];
+    int count = 0;
+    while (neighbor != NULL) {
+        if (!obstacle_config[neighbor->x] && neighbor->x != curr_vertex) {
+            if (count == target_index) {
+                return neighbor->x;
+            }
+            count++;
+        }
+        neighbor = neighbor->next;
+    }
+    
+    return -1; // Should not reach here if valid_neighbors > 0
 }
