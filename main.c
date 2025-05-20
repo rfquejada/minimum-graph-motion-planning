@@ -1,6 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include "dijkstras.h"
+#include "dfs_pathfinder.h"
+#include <time.h>
 
 //Structure for the graph
 typedef struct node{
@@ -15,9 +17,11 @@ int *readObstacles(int, int *, int *, int *);
 void printObstacles(int *, int);
 void printStartGoal(int, int);
 
+
 int main() {
     graph **g;
     int v, e, num_obstacles, start, goal;
+    srand(time(NULL)); 
 
     g = createAdjList(&v, &e);
     int *obstacles = readObstacles(v, &num_obstacles, &start, &goal);
@@ -37,6 +41,28 @@ int main() {
     } else {
         printf("No path found\n");
     }
+
+    struct Graph* dfsGraph = createGraph(v);
+    FILE *fp = fopen("config.in", "r");
+    if (fp == NULL) {
+        printf("Error opening config.in\n");
+        exit(1);
+    }
+
+    fscanf(fp, "%d", &v);  // Number of vertices
+    fscanf(fp, "%d", &e);  // Number of edges
+
+    for (int i = 0; i < e; i++) {
+        int src, dest;
+        fscanf(fp, "%d %d", &src, &dest);
+        addEdge(dfsGraph, src, dest);
+    }
+
+    fclose(fp);
+
+
+    printf("\n--- DFS Pathfinding ---\n");
+    findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
 
     deleteGraph(g, v);
     free(obstacles);
