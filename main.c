@@ -4,6 +4,8 @@
 #include "dfs_pathfinder.h"
 #include <time.h>
 
+int IS_DIJKSTRAS = 1;
+
 //Structure for the graph
 typedef struct node{
     int x;
@@ -18,13 +20,15 @@ int *readObstaclesDFS(int, int *, int *, int *);
 
 void printObstacles(int *, int);
 void printStartGoal(int, int);
+struct timespec time_before, time_after;
 
 
 int main() {
     graph **g;
     int v, e, num_obstacles, start, goal;
+    float time_before, time_after, time_elapsed;
     srand(time(NULL)); 
-
+  
     g = createAdjList(&v, &e);
     int *obstacles = readObstacles(v, &num_obstacles, &start, &goal);
     
@@ -33,40 +37,51 @@ int main() {
     printObstacles(obstacles, v);
     printStartGoal(start, goal);
 
-    path_result result = dijkstra(g, v, start, goal, obstacles, num_obstacles);
-    if (result.path) {
-        printf("Path found: ");
-        for (int i = 0; i < result.length; i++) {
-            printf("%d ", result.path[i]);
+    time_before = clock();
+
+    if (IS_DIJKSTRAS){
+        path_result result = dijkstra(g, v, start, goal, obstacles, num_obstacles);
+        if (result.path) {
+            printf("Path found: ");
+            for (int i = 0; i < result.length; i++) {
+                printf("%d ", result.path[i]);
+            }
+            printf("\nNumber of steps: %d\n", result.length - 1);
+            free(result.path);
+        } else {
+            printf("No path found\n");
         }
-        printf("\nNumber of steps: %d\n", result.length - 1);
-        free(result.path);
     } else {
-        printf("No path found\n");
-    }
+        struct Graph* dfsGraph = createGraph(v);
+        FILE *fp = fopen("config.in", "r");
+        if (fp == NULL) {
+            printf("Error opening config.in\n");
+            exit(1);
+        }
 
-    struct Graph* dfsGraph = createGraph(v);
-    FILE *fp = fopen("config.in", "r");
-    if (fp == NULL) {
-        printf("Error opening config.in\n");
-        exit(1);
-    }
+        fscanf(fp, "%d", &v);  // Number of vertices
+        fscanf(fp, "%d", &e);  // Number of edges
 
-    fscanf(fp, "%d", &v);  // Number of vertices
-    fscanf(fp, "%d", &e);  // Number of edges
+        for (int i = 0; i < e; i++) {
+            int src, dest;
+            fscanf(fp, "%d %d", &src, &dest);
+            addEdge(dfsGraph, src, dest);
+        }
 
-    for (int i = 0; i < e; i++) {
-        int src, dest;
-        fscanf(fp, "%d %d", &src, &dest);
-        addEdge(dfsGraph, src, dest);
-    }
+        fclose(fp);
 
-    fclose(fp);
 
 
     printf("\n--- DFS Pathfinding ---\n");
     obstacles = readObstaclesDFS(v, &num_obstacles, &start, &goal);
     findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
+
+
+  
+    time_after = clock();
+    time_elapsed = (float)(time_after - time_before) / CLOCKS_PER_SEC;
+    printf("Time taken: %f seconds\n", time_elapsed);
+
 
     deleteGraph(g, v);
     free(obstacles);
