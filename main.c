@@ -1,7 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include "dijkstras.h"
-#include<time.h>
+#include "dfs_pathfinder.h"
+#include <time.h>
 
 //Structure for the graph
 typedef struct node{
@@ -17,11 +18,13 @@ void printObstacles(int *, int);
 void printStartGoal(int, int);
 struct timespec time_before, time_after;
 
+
 int main() {
     graph **g;
     int v, e, num_obstacles, start, goal;
     float time_before, time_after, time_elapsed;
-
+    srand(time(NULL)); 
+  
     g = createAdjList(&v, &e);
     int *obstacles = readObstacles(v, &num_obstacles, &start, &goal);
 
@@ -42,6 +45,28 @@ int main() {
         printf("No path found\n");
     }
 
+    struct Graph* dfsGraph = createGraph(v);
+    FILE *fp = fopen("config.in", "r");
+    if (fp == NULL) {
+        printf("Error opening config.in\n");
+        exit(1);
+    }
+
+    fscanf(fp, "%d", &v);  // Number of vertices
+    fscanf(fp, "%d", &e);  // Number of edges
+
+    for (int i = 0; i < e; i++) {
+        int src, dest;
+        fscanf(fp, "%d %d", &src, &dest);
+        addEdge(dfsGraph, src, dest);
+    }
+
+    fclose(fp);
+
+
+    printf("\n--- DFS Pathfinding ---\n");
+    findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
+  
     time_after = clock();
     time_elapsed = (float)(time_after - time_before) / CLOCKS_PER_SEC;
     printf("Time taken: %f seconds\n", time_elapsed);

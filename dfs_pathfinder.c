@@ -141,15 +141,14 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
         bool loop = true;
         while (loop) {
             loop = false;
-            int moveCase = rand() % 3; // 0 = robot only, 1 = obstacle only, 2 = both
+            int moveCase = rand() % 2; // 0 = robot only, 1 = obstacle only, 2 = both
             printf("Move case: %d (%s)\n", moveCase,
-                moveCase == 0 ? "robot only" :
-                moveCase == 1 ? "obstacle only" : "both");
+                moveCase == 0 ? "robot only" :"obstacle only");
 
             bool robotMoved = false;
 
             // Move obstacles if needed
-            if (moveCase == 1 || moveCase == 2) {
+            if (moveCase == 1 ) {
                 loop = true; // obstacles moved, may try again
                 for (int i = 0; i < obstacleSize; i++) {
                     int original = obstacle[i];
@@ -173,7 +172,7 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
             }
 
             // Move robot if allowed
-            if (moveCase == 0 || moveCase == 2) {
+            if (moveCase == 0 ) {
                 struct Node* temp = graph->array[current].head;
                 while (temp) {
                     int adj = temp->data;
@@ -190,7 +189,7 @@ void DFSShortestPath(struct Graph* graph, int current, int destination, bool vis
             }
 
             // If robot did not move, wait and try again
-            if (!robotMoved && (moveCase == 0 || moveCase == 2)) {
+            if (!robotMoved && (moveCase == 0)) {
                 printf("⏳ Robot is blocked at %d. Waiting for path to clear...\n", current);
 
                 // Try to move obstacles again
@@ -272,37 +271,37 @@ void findShortestPathDFS(struct Graph* graph, int start, int end, int* obstacles
 
 
 // Main function
-int main() {
-    int vertices = 4;
-    srand(time(NULL));
+// int main() {
+//     int vertices = 4;
+//     srand(time(NULL));
 
-    struct Graph* graph = createGraph(vertices);
+//     struct Graph* graph = createGraph(vertices);
     
-    // Adding edges
-    addEdge(graph, 2, 0);
-    addEdge(graph, 1, 2);
-    addEdge(graph, 0, 1);
-    addEdge(graph, 2, 3);
-    addEdge(graph, 1, 3);   
+//     // Adding edges
+//     addEdge(graph, 2, 0);
+//     addEdge(graph, 1, 2);
+//     addEdge(graph, 0, 1);
+//     addEdge(graph, 2, 3);
+//     addEdge(graph, 1, 3);   
 
-    int obstacleSize = 2;
-    int* obstacles = (int*)malloc(obstacleSize * sizeof(int));
-    obstacles[0] = 1;
-    obstacles[1] = 0;
+//     int obstacleSize = 2;
+//     int* obstacles = (int*)malloc(obstacleSize * sizeof(int));
+//     obstacles[0] = 1;
+//     obstacles[1] = 0;
     
 
-    // DFS Traversal
-    // int order[] = {2, 0, 1, 3};
-    // int orderSize = sizeof(order) / sizeof(order[0]);
+//     // DFS Traversal
+//     // int order[] = {2, 0, 1, 3};
+//     // int orderSize = sizeof(order) / sizeof(order[0]);
 
-    // printf("\n--- DFS TRAVERSAL OUTPUT ---\n");
-    // DFSTraversal(graph, order, orderSize);
+//     // printf("\n--- DFS TRAVERSAL OUTPUT ---\n");
+//     // DFSTraversal(graph, order, orderSize);
     
-    // Shortest path
-    int start = 2;
-    int end = 3;
-    printf("\n--- SHORTEST PATH OUTPUT ---\n");
-    findShortestPathDFS(graph, start, end, obstacles, obstacleSize);
+//     // Shortest path
+//     int start = 2;
+//     int end = 3;
+//     printf("\n--- SHORTEST PATH OUTPUT ---\n");
+//     findShortestPathDFS(graph, start, end, obstacles, obstacleSize);
 
-    return 0;
-}
+//     return 0;
+// }
