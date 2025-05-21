@@ -72,10 +72,10 @@ int main() {
 
 
 
-    printf("\n--- DFS Pathfinding ---\n");
-    obstacles = readObstaclesDFS(v, &num_obstacles, &start, &goal);
-    findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
-
+        printf("\n--- DFS Pathfinding ---\n");
+        obstacles = readObstaclesDFS(v, &num_obstacles, &start, &goal);
+        findShortestPathDFS(dfsGraph, start, goal, obstacles, num_obstacles);
+    }
 
   
     time_after = clock();
